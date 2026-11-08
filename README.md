@@ -1,36 +1,58 @@
 # BIASRNet
 
-BIASRNet (Burst Intermediate Alignment Super-Resolution Net): multi-frame
-(burst) thermal video super-resolution, x4.
+Multi-frame (burst) thermal video super-resolution, x4.
 
-RRDB feature extraction + EDVR-style PCD (Pyramid, Cascading,
-Deformable-conv) alignment of every neighbor frame's features onto the
-center frame's features + RRDB body + pixel-shuffle upsampling, with the
-center frame's bicubic upsample kept as a long residual skip. Optimized for
-PSNR. See `model.py` for the full architecture notes and references.
+- **BIASRNet** = Burst Intermediate Alignment Super-Resolution Net.
+- Pipeline: per-frame RRDB feature extraction -> EDVR-style PCD (Pyramid,
+  Cascading, Deformable-conv) alignment of every neighbor frame's features
+  onto the center frame's features -> channel-concat fusion -> RRDB body ->
+  pixel-shuffle x4 upsample, with the center frame's bicubic upsample kept
+  as a long residual skip.
+- Input is expected classically pre-aligned (Farneback optical flow, see
+  `align.py`); PCD then does a second, learned, feature-space re-alignment
+  on top of that.
+- Optimized for PSNR. See `model.py` for full architecture notes and the
+  PCD reference (Wang et al., EDVR, CVPRW 2019).
+- A diffusion-based perceptual-quality refinement stage built on top of a
+  frozen BIASRNet checkpoint is available as a separate project,
+  [BIADSRNet](https://github.com/meister1378/BiadSRNet).
 
-A diffusion-based perceptual-quality refinement stage built on top of a
-frozen BIASRNet checkpoint is available as a separate project, BIADSRNet.
+### Architecture
+
+```
+LR burst (n frames)
+   |
+   v
+per-frame RRDB feature extraction (shared weights)
+   |
+   v
+3-level feature pyramid (per frame)
+   |
+   v
+PCD alignment: each neighbor frame's pyramid -> center frame's pyramid
+   |
+   v
+channel-concat fusion (1x1 conv)
+   |
+   v
+RRDB body
+   |
+   v
+pixel-shuffle x4 upsample  -------->  (+)  <--  bicubic upsample of center frame
+                                       |
+                                       v
+                                  HR output
+```
 
 ## Files
 
-- `model.py` -- BIASRNet + PCD alignment module
+- `model.py` -- BIASRNet (includes the PCD alignment submodule)
 - `align.py` -- classical Farneback pre-alignment for a real LR burst
 - `infer.py` -- runs a trained BIASRNet on a real LR burst (no synthetic
   degradation -- this is the production inference path)
 
 This repo ships inference code only. You'll need a trained checkpoint
 (`.pth`) to run it.
-
-## Inference
-
-```bash
-python infer.py --frames-dir /path/to/real_lr_frames \
-    --ckpt ./checkpoints/biasrnet_bestPSNR.pth --out-dir ./out
-```
-
-`--frames-dir` should contain real, already-low-resolution consecutive
-grayscale frames.
 
 ## Requirements
 
@@ -40,6 +62,30 @@ torchvision
 opencv-python
 numpy
 ```
+
+## Inference
+
+```bash
+python infer.py --frames-dir /path/to/real_lr_frames \
+    --ckpt ./checkpoints/biasrnet_bestPSNR.pth --out-dir ./out
+```
+
+`--frames-dir` should contain real, already-low-resolution consecutive
+grayscale frames. Add `--fp16` for faster GPU inference (see Results below
+for the measured speed/quality tradeoff).
+
+## Results
+
+Measured on an RTX 4090, 256x320 LR -> 1024x1280 HR, batch size 1, 5-frame
+burst (includes the Farneback pre-alignment step):
+
+| | Value |
+|---|---|
+| Params | 10.03M |
+| Best val PSNR | 32.92 dB |
+| Speed (fp32) | 4.1 FPS |
+| Speed (fp16) | 5.3 FPS |
+| fp16 vs fp32 output difference | 66.65 dB PSNR (negligible) |
 
 ## Data
 
