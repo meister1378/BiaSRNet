@@ -19,30 +19,9 @@ Multi-frame (burst) thermal video super-resolution, x4.
 
 ### Architecture
 
-```
-LR burst (n frames)
-   |
-   v
-per-frame RRDB feature extraction (shared weights)
-   |
-   v
-3-level feature pyramid (per frame)
-   |
-   v
-PCD alignment: each neighbor frame's pyramid -> center frame's pyramid
-   |
-   v
-channel-concat fusion (1x1 conv)
-   |
-   v
-RRDB body
-   |
-   v
-pixel-shuffle x4 upsample  -------->  (+)  <--  bicubic upsample of center frame
-                                       |
-                                       v
-                                  HR output
-```
+<div align="center">
+	<img src="img/architecture.png" width="90%"/>
+</div>
 
 ## Files
 
@@ -75,6 +54,10 @@ grayscale frames. Add `--fp16` for faster GPU inference (see Results below
 for the measured speed/quality tradeoff).
 
 ## Results
+
+<div align="center">
+	<img src="img/result_comparison.png" width="90%"/>
+</div>
 
 Measured on an RTX 4090, 256x320 LR -> 1024x1280 HR, batch size 1, 5-frame
 burst (includes the Farneback pre-alignment step):
