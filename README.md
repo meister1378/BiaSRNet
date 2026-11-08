@@ -50,8 +50,8 @@ python infer.py --frames-dir /path/to/real_lr_frames \
 ```
 
 `--frames-dir` should contain real, already-low-resolution consecutive
-grayscale frames. Add `--fp16` for faster GPU inference (see Results below
-for the measured speed/quality tradeoff).
+grayscale frames. Add `--fp16` for faster GPU inference (negligible
+quality impact -- see Results below).
 
 ## Results
 
@@ -66,8 +66,6 @@ burst (includes the Farneback pre-alignment step):
 |---|---|
 | Params | 10.03M |
 | Best val PSNR | 32.92 dB |
-| Speed (fp32) | 4.1 FPS |
-| Speed (fp16) | 5.3 FPS |
 | fp16 vs fp32 output difference | 66.65 dB PSNR (negligible) |
 
 ## Data
